@@ -201,5 +201,14 @@ class Asteroid:
     def split(self):
         new_scale = self.scale * 0.6
         if new_scale < ASTEROID_SCALE_MIN:
+            self.dead = True
             return []
         pieces = []
+
+        for _ in range(random.randint(*ASTEROID_FRAGMENT_COUNT)):
+            ang = random.random() * 2 * math.pi
+            speed = random.uniform(*ASTEROID_SPEED_RANGE)
+            val = add(self.val, math.cos(ang) * speed, math.sin(ang) * speed)
+            spin = random.uniform(-120.0, 120.0)
+            pieces.append(Asteroid(self.pos, val, self.base_image, new_scale, spin))
+        self.dead = True
