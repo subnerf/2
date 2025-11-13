@@ -212,3 +212,4 @@ class Asteroid:
             spin = random.uniform(-120.0, 120.0)
             pieces.append(Asteroid(self.pos, val, self.base_image, new_scale, spin))
         self.dead = True
+        return pieces
