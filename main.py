@@ -187,7 +187,7 @@ class Asteroid:
         self.rect = self.image.get_rect(center=(int(self.pos[0]), int(self.pos[1])))
 
         # Collision radius
-        self.radius = 0.5 * max(w_sh, h_sh) * ASTEROID_COLLISION_SCALE
+        self.radius = 0.5 * self.angle_width() * ASTEROID_COLLISION_SCALE
 
     def update(self, dt):
         self.pos = add(self.pos, scale_vector(self.vel, dt))
@@ -196,6 +196,10 @@ class Asteroid:
         self.rect.center = (int(self.pos[0]), int(self.pos[1]))
 
     def draw(self, surf):
-        rotated = pygame.transform.rotate(self.image_scaled, self.angle)
-        rrect = rotated.get_rect(center=(int(self.pos[0]), int(self.pos[1])))
-        surf.blit(rotated, rrect)
+        surf.blit(self.image, self.rect)
+
+    def split(self):
+        new_scale = self.scale * 0.6
+        if new_scale < ASTEROID_SCALE_MIN:
+            return []
+        pieces = []
