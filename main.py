@@ -204,7 +204,7 @@ class Asteroid:
             self.dead = True
             return []
         pieces = []
-
+        # Create 2-3 smaller asteroids
         for _ in range(random.randint(*ASTEROID_FRAGMENT_COUNT)):
             ang = random.random() * 2 * math.pi
             speed = random.uniform(*ASTEROID_SPEED_RANGE)
