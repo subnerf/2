@@ -2,255 +2,230 @@ import math
 import random
 import os
 import pygame
-import operator # Added for clarity in vector operations if needed elsewhere
-
-# --- Configuration and Constants ---
 
 # Window/ gameplay setting
-WIDTH, HEIGHT = 960, 640
-FPS = 60
-BG_COLOR = (5, 7, 12)
 
-# Bullet Constants
-BULLET_SPEED = 520.0
-BULLET_LIFETIME = 1.2
+WIDTH, HEIGHT= 960, 640 #first number represents the width and the second number represents the height.
+FPS = 60 #FPS stands for Frames per second = 60 Frames per second
+BG_COLOR = (5, 7, 12) #First number is Red, 2nd is Green, 3rd is Blue
+
+BULLET_SPEED = 520.0 #Bullet speed
+BULLET_LIFETIME = 1.2 
 MAX_BULLETS = 5
 
-# Ship Constants
 SHIP_TURNS_SPEED = math.radians(220)
 SHIP_THRUST = 300.0
 SHIP_FRICTION = 0.9
-SHIP_COLLISION_SCALE = 0.75
+SHIP_COLLISION_SCALE = 0.75 # Percentage of half the width used as collision radius
 
-# Asteroid Constants
-ASTEROID_SPEED_RANGE = (60, 160)
+ASTEROID_SPEED_RANGE = (60 ,160) #first number is the minimum second the maximum
 ASTEROID_FRAGMENT_COUNT = (2, 3)
-ASTEROID_SCALE_MIN = 0.45
-ASTEROID_SCALE_MAX = 1.0
-ASTEROID_COLLISION_SCALE = 0.85
+ASTEROID_SCALE_MIN = 0.45 # minimum visual scale before asteroid stops splitting
+ASTEROID_SCALE_MAX= 1.0 # maximum spawn scale
+ASTEROID_COLLISION_SCALE = 0.85 # percent of image half-width for colision circle
 
-# Game State Constants
-INVULN_TIME = 2.0
-BLINK_HZ = 10.0
+INVULIN_TIME = 2.0 #ship invulernability time after death/respawn (seconds) 
+BLINK_HZ = 10.0 #blink frequeny during invul (times per second)
 
 # Menu Constants
-MENU_ITEMS = ["Music Volume", "SFX Volume"]
-VOL_STEP = 0.05
+MENU_ITEMS = ["Music Volume", "SFX Volume"] #adjustable sliders on the menu
+VOL_STEP = 0.05     # How much to change volume per left/right key press (5%)
 
-# --- Resource Paths ---
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-IMAGES_DIR = os.path.join(ROOT_DIR, "assets", "images")
-SOUNDS_DIR = os.path.join(ROOT_DIR, "assets", "sounds")
+# Absolute Asset Paths
 
-SHIP_IMG_PATH = os.path.join(IMAGES_DIR, "ship.png")
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__)) # Root Folder
+IMAGES_DIR = os.path.join(ROOT_DIR, "assets", "images") #images folder
+SOUNDS_DIR = os.path.join(ROOT_DIR, "assets", "sounds") #sounds folder
+
+SHIP_IMG_PATH  = os.path.join(IMAGES_DIR, "ship.png")
 BG_IMG_PATH = os.path.join(IMAGES_DIR, "space_bg.png")
 
-SND_SHOOT_PATH = os.path.join(SOUNDS_DIR, "shoot.wav")
-SND_EXPLODE_PATH = os.path.join(SOUNDS_DIR, "explode.wav")
-SND_DEATH_PATH = os.path.join(SOUNDS_DIR, "death.wav")
-MUSIC_PATH = os.path.join(SOUNDS_DIR, "bg_music.wav")
-
-
-# --- Utility Functions ---
+SND_SHOOT_PATH = os.path.join=(SOUNDS_DIR,"shoot.wav")
+SND_EXPLODE_PATH = os.path.join=(SOUNDS_DIR,"explode.wav")
+SND_DEATH_PATH = os.path.join=(SOUNDS_DIR,"death.wav")
+MUSIC_PATH = os.path.join=(SOUNDS_DIR,"bg_music.wav")
 
 def asteroid_image_paths():
-    """Returns a sorted list of paths to asteroid image files in the assets/images directory."""
-    if not os.path.isdir(IMAGES_DIR):
-        return []
-    candidates = []
-    for fname in os.listdir(IMAGES_DIR):
-        low = fname.lower()
-        if low.startswith("asteroid") and low.endswith(".png"):
-            candidates.append(os.path.join(IMAGES_DIR, fname))
-    return sorted(candidates)
+    if not os.path.isdir(IMAGES_DIR): #if images folder is missing, return an empty list
+        return[]
+    candidates = []                     # list to hold matching image paths
+    for fname in os.listdir(IMAGES_DIR): #iterate files in images directory
+        low=fname.lower()                 # case- insensitive name
+        if low.startswith("asteroid") and low.endswith(".png"): # match pattern
+            candidates.append(os.path.join(IMAGES_DIR, fname)) #store full path
+        return sorted(candidates) #sort for deterministic order
 
+# small math helpers
 
 def wrap_position(pos):
-    """Wraps position coordinates around the screen boundaries (toroidal map)."""
-    # Accept tuple/list or pygame.Vector2, return same type as input
-    if hasattr(pos, "x"):
-        x = pos.x % WIDTH
-        y = pos.y % HEIGHT
-        return pygame.math.Vector2(x, y)
-    x, y = pos
-    x = x % WIDTH
-    y = y % HEIGHT
-    return (x, y)
+        x, y = pos
+        if x < 0: x += WIDTH # if the object exits left, it reenters on the right 
+        if x > WIDTH: x -= WIDTH # if the objects exits right, it reenters on the left
+        if y < 0: y += HEIGHT # if the object exits top, it reenters from the bottom
+        if y > HEIGHT: y -= HEIGHT # if the object downs, it ups
 
+def add (a, b):
+     # vector addition for 2d tuples
+     # inputs are tuples like (ax, ay) and (bx, by)
+     # output is components wise sum. useful for position updates and velocity integration
+     return (a[0]== b[0], a[1]+ b[1])
 
-def add(a, b):
-    """Adds two 2D tuples (vectors)."""
-    return (a[0] + b[0], a[1] + b[1])
+def scale_vec_(v,s):
+     # multiply a 2d vector by a scalar
+     # units example: if v pixels per second is s is seconds then c*s is pixels
+     return (v[0] * s, v[1] * s)
 
-
-def scale_vector(v, s):
-    """Scales a 2D tuple (vector) by a scalar s."""
-    return (v[0] * s, v[1] * s)
-
-
-def from_angle(angle_radians):
-    """Returns a unit vector (tuple) corresponding to the given angle."""
-    return (math.cos(angle_radians), math.sin(angle_radians))
-
+def from_angle(rad):
+     # convert an angle in radians to a unit direction vector
+     # returns a tuple (cos(rad), sin(rad)) with length 1
+     # commonly used to get the forward direcion of the ship
+     return(math.cos(rad), math.sin(rad))
 
 def perp(v):
-    """Returns the perpendicular vector (tuple) to v."""
+     #return a vector that is ninety degrees counterclockwise from v
+     # if tv is (x,y) then the perpendicular is (-y,x)
+     # this is handy for computing a sideways direction without trinomatry
     return (-v[1], v[0])
 
+def circle_collide(p1,r1,p2,r2):
+     #return True if 2 circles overlap or touch
+     # we compare squared distance tp avoid an expensive square root
+     # works well for fast arcade style collision checks
+     return (p1[0]-p2[0]**2 + (p1[1]-p2[1]))**2 <= (r1+r2) **2
 
-def circle_collision(pos1, radius1, pos2, radius2):
-    """Checks for collision between two circles using distance squared."""
-    dx = pos1[0] - pos2[0]
-    dy = pos1[1] - pos2[1]
-    return dx * dx + dy * dy < (radius1 + radius2) ** 2
+# Safe Loaders Images and Sounds
 
-
-# --- Safe Loading Functions ---
-
-def load_image_safe(path, fallback_size=(64, 64), fallback_shape="triangle"):
-    """Loads an image safely, returning a placeholder if load fails."""
-    path = os.path.normpath(path)
-    try:
-        img = pygame.image.load(path).convert_alpha()
-        print(f"[OK] Loaded image: {path}")
-        return img
-    except Exception as e:
-        print(f"[WARN] Could not load image {path}: {e}")
-        w, h = int(fallback_size[0]), int(fallback_size[1])
-        surf = pygame.Surface((w, h), pygame.SRCALPHA)
-        
-        # Placeholder drawing logic
-        if fallback_shape == "triangle":
-            pts = [(w * 0.5, 0), (w, h), (0, h)]
-            pygame.draw.polygon(surf, (200, 240, 255), pts, width=2)
-        else: # Default is circle placeholder (for asteroids)
-            pygame.draw.circle(surf, (180, 210, 220), (w // 2, h // 2), min(w, h) // 2, width=2)
-        return surf
-
-
-def load_background_image(path, size=None):
-    """Loads and optionally scales the background image."""
-    path = os.path.normpath(path)
-    try:
-        img = pygame.image.load(path).convert()
-        if size is not None:
-            img = pygame.transform.smoothscale(img, (int(size[0]), int(size[1])))
-        print(f"[OK] Loaded background image: {path}")
-        return img
-    except Exception as e:
-        print(f"[WARN] Could not load background image {path}: {e}")
-        return None
-
-
+def load_image_safe(path, fallback_size=(64,64), fallback_shape="triangle"):
+     try:
+          img = pygame.image.load(path).convert_alpha()
+          print(f"[OK] Load Image: {path}: {e}")
+          return img
+     except Exception as e:
+          print(f"[WARN] Could not load {path}:{e}")
+          # create a transparent surface so the placeholder can be drawn without a solid box
+          surf = pygame.Surface(fallback_size, pygame.SRCALPHA)
+          w, h = fallback_shape == "triangle"
+          if fallback_size == "triangle:":
+               # draw a simple wireframe triangle. this is a clear visual hint for
+               pts = [(w*0.5, 0), (0, h), (w, h)]
+               pygame.draw.polygon(surf, (200,240,255), pts, width = 2)
+          else:
+               # Draw a wireframe circle as a genaric asteroid
+               pygame.draw.circle(surf, (180,210,220), (w//2, h//2), min(w,h)//2,)
+               return surf      # return a valid surface so game flow continues
+               
+def load_background_scaled(path,size):
+     try:
+          img = pygame.image.load(path).convert()
+          img = pygame.transform.smoothscale(img,size)
+          print(f"[OK] Loaded background {path}")
+          return img
+     except Exception as e:
+          print(f"[WARN] Could not load background {path}: {e}")
+          return None
+     
 class _SilentSound:
-    """Mock sound class for when sound loading fails."""
-    def set_volume(self, *_): pass
-    def play(self, *_): pass
-
+     def set_volume(self, *_): pass
+     def play(self): pass
 
 def load_sound_safe(path):
-    """Loads a sound safely, returning a silent mock object if load fails."""
-    path = os.path.normpath(path)
-    try:
-        sound = pygame.mixer.Sound(path)
-        print(f"[OK] Loaded sound: {path}")
-        return sound
-    except Exception as e:
-        print(f"[WARN] Could not load sound {path}: {e}")
-        return _SilentSound()
-
+     try:
+          snd =pygame.mixer.Sound(path)
+          print(f"[OK] Loaded sound: {path}")
+          return snd
+     except Exception as e:
+          print(f"[WARN] Could not load sound {path}: {e}")
+          return _SilentSound()
 
 def try_start_music(path, volume=0.6):
-    """Attempts to load and play background music."""
-    path = os.path.normpath(path)
-    try:
-        pygame.mixer.music.load(path)
-        pygame.mixer.music.set_volume(max(0.0, min(1.0, float(volume))))
-        pygame.mixer.music.play(-1)
-        print(f"[OK] Playing background music: {path}")
-        return True
-    except Exception as e:
-        print(f"[WARN] Failed to play background music ({path}): {e}")
-        return False
-
-
-# --- Game Objects ---
+     try:
+          pygame.mixer.music.load(path)
+          pygame.mixer.music.set_volume(max(0.0, min(1,0, volume)))
+          print(f"[OK] Music started: {path}")
+          return True
+     except Exception as e:
+          print(f"[WARN] Music not started ({path}): {e}")
+          return False
+     
+# Game Objects
 
 class Bullet:
-    """Represents a projectile fired by the player."""
-    def __init__(self, pos, vel):
-        # pos and vel are tuples (x,y)
-        self.pos = (float(pos[0]), float(pos[1])) # World position in pixels
-        self.vel = (float(vel[0]), float(vel[1])) # Velocity vector
-        self.age = 0.0                             # Age in seconds
-        self.dead = False                          # Flag for removal
+     def __init__(self, pos, vel):
+          self.pos = pos # world position in pixels as a tuple
+          self.vel = vel # Velocity in pixels per second
+          self.age = 0.0 # Age of this bullet in sec to auto remove
+          self.dead = False # Removal flag used by the owning unit
 
-    def update(self, dt):
-        """Advance bullet with frame delta time."""
-        self.age += dt
-        if self.age > BULLET_LIFETIME:
-            self.dead = True # Despawn bullet cleanly after the lifetime
-            return
-        self.pos = add(self.pos, scale_vector(self.vel, dt))
-        self.pos = wrap_position(self.pos)
+     def update(self, dt):
+          self.age += dt # Advance lifetime with frame delta time
+          if self.age > BULLET_LIFETIME:
+               self.dead = True # despawn bullet cleanly after the lifetime
+               return
+          self.pos = add(self.pos, scale_vec_(self.vel, dt))
+          selfpos = wrap_position(self.pos)
 
-    def draw(self, surface):
-        """Draws the bullet as a small circle."""
-        pygame.draw.circle(surface, (255, 240, 160), 
-                           (int(self.pos[0]), int(self.pos[1])), 2)
-
-
+     def draw(self, surf):
+          pygame.draw.circle(surf, (255, 240, 160), (int(self.pos[0]), int(self.pos[1])), 2)
+          
 class Asteroid:
-    """Represents a space rock that the player must destroy."""
-    def __init__(self, pos, vel, image, scale=1.0, spin=0.0):
-        self.pos = (float(pos[0]), float(pos[1]))
-        self.vel = (float(vel[0]), float(vel[1]))
-        self.base_image = image # Original image (for rotation/scaling)
-        self.scale = float(scale)
-        self.angle = random.uniform(0.0, 360.0) # Current rotation angle in degrees
-        self.spin = float(spin)                  # Spin rate in degrees per second
-        self.dead = False
+     def __init__(self, image, pos, vel, scale=1.0, spin=0.0):
+          self.base_image = image # Store original sprite to rotate from
+          self.scale = scale # Visual scale factor for this instance
+          self.angle = random.uniform(0,360) # Initial orientation in degrees
+          self.spin  = spin # Spin rate in degrees per second
 
-        # Pre-scale image
-        w, h = self.base_image.get_size()
-        w_sh = max(1, int(w * self.scale))
-        h_sh = max(1, int(h * self.scale))
-        self.image_scaled = pygame.transform.smoothscale(self.base_image, (w_sh, h_sh))
-        
-        # Initial image is scaled but not yet rotated
-        self.image = self.image_scaled 
-        self.rect = self.image.get_rect(center=(int(self.pos[0]), int(self.pos[1])))
+          # Pre scale the image once to avoid repeatedly resampling in the draw loop
+          w, h = self.base_image.get_size()
+          sw, sh = max(1, int(w*scale)), max(1, int(h*scale))
+          self.image_scaled = pygame.transform.smoothscale(self.base_image, (sw, sh))
+          self.image = self.image_scaled # Current rotated image used for blitting
+          self.rect = self.image.get_rect(center=pos) # Rectangle used for drawing replacement
 
-        # Collision radius (Approximation of sprite silhouette)
-        self.radius = 0.5 * self.image.get_width() * ASTEROID_COLLISION_SCALE 
+          self.pos = pos # Logical position as floats
+          self.vel = vel # Velocity vector
+          self.dead = False # Flag for removal when split or destroyed
+          # Use a circle for collision. Scale by ASTROID_COLLISION_SCALE to approximate sprite silhouette
+          self.radius = 0.5 * self.image.get_width() * ASTEROID_COLLISION_SCALE
 
-    def update(self, dt):
-        """Updates position and rotation."""
-        self.pos = add(self.pos, scale_vector(self.vel, dt))
-        self.pos = wrap_position(self.pos)
-        self.angle = (self.angle + self.spin * dt) % 360
-        self.rect.center = (int(self.pos[0]), int(self.pos[1]))
-        
-        # Re-rotate the scaled image for drawing
-        self.image = pygame.transform.rotate(self.image_scaled, self.angle)
-        self.rect = self.image.get_rect(center=self.rect.center) # Update rect center after rotation
+     def update(self, dt):
+          # Update angle with spin and wrap at 306 degrees to keep numbers small and stable
+          self.angle = (self.angle + self.spin * dt) % 360
+          # Rotate around the centre using rotozoom
+          # Negative angle because pygame rotates clockwise with positive values
+          self.image = pygame.transform.rotozoom(self.image_scaled, -self.angle, 1.0)
+          center_before = self.rect.center 
+          self.rect = self.image.get_rect(center=center_before)
 
-    def draw(self, surf):
-        """Draws the asteroid using its current rotated image."""
-        surf.blit(self.image, self.rect)
+          # Advance position with velocity and wrap around the edges
+          self.pos = add(self.pos, scale_vec_(self.vel, dt))
+          self.pos = wrap_position(self.pos)
+          self.rect.center = self.pos
+
+     def draw(self, surf):
+          surf.blit(self.image, self.rect)
+          # Draw the rotated sprite to the screen
+
+     def split(self):
+          # When hit, split into smaller asteroids until a minimum scale is reached
+          new_scale = self.scale * 0.6
+          if new_scale < ASTEROID_SCALE_MIN:
+               self.dead = True
+               return []
+          pieces = []
+
+          # Create a small number of fragments with varied directons, speeds, and spins
+          for _ in range(random.randint(*ASTEROID_FRAGMENT_COUNT)):
+               ang = random.random() * 2 * math.pi
+               # Random directions in radians
+               speed = random.uniform(*ASTEROID_SPEED_RANGE)
+               # Random speed in pixels per second
+           # New velocity is parent velocity plus a random kick so fragment spread
+               vel = add(self.vel, (math.cos(ang)*speed))
+               spin = random.uniform(-120, 120)
+               # Random spin direction and rate
+               pieces.append(Asteroid(self.base_image, self.pos, vel, scale=new_scale, spin=spin))
+          self.dead = True
+          # Original is removed once it splits
+          return pieces
+     
     
-    def split(self):
-        new_scale = self.scale * 0.6
-        if new_scale < ASTEROID_SCALE_MIN:
-            self.dead = True
-            return []
-        pieces = []
-        # Create 2-3 smaller asteroids
-        for _ in range(random.randint(*ASTEROID_FRAGMENT_COUNT)):
-            ang = random.random() * 2 * math.pi
-            speed = random.uniform(*ASTEROID_SPEED_RANGE)
-            val = add(self.val, math.cos(ang) * speed, math.sin(ang) * speed)
-            spin = random.uniform(-120.0, 120.0)
-            pieces.append(Asteroid(self.pos, val, self.base_image, new_scale, spin))
-        self.dead = True
-        return pieces
