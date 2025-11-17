@@ -233,9 +233,9 @@ class Ship:
           self.base_image = image # Image that will be rotated each frame
           self.image = image
 
-          self.pos = (WIDTH/2, HEIGHT/2)
-          self.val = (0.0, 0.0)
-          self.angle = -90.0
-          self.cooldown = 0.0
+          self.pos = (WIDTH/2, HEIGHT/2) #World pos as floats
+          self.val = (0.0, 0.0) #val in pix per sec
+          self.angle = -90.0  # face = 0 degrees 
+          self.cooldown = 0.0 # Time to next bullet can be fired
           self.invuln = 0.0
           self.alive = True
