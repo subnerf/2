@@ -257,3 +257,19 @@ class Ship:
      def _tail_pos(self):
           fwd = from_angle(math.radians(self.angle))
           return add(self.pos, scale_vec_(fwd, -self.tail_dist))
+     
+     def update(self, dt, keys):
+          if keys[pygame.K_LEFT]:
+               self.angle -= math.degrees(SHIP_TURNS_SPEED * dt)
+          if keys[pygame.K_RIGHT]:
+               self.angle += math.degrees(SHIP_TURNS_SPEED * dt)
+
+
+          self.image = pygame.transform.rotozoom(self.base_image, -self.angle, 1.0)
+          center_before = self.rect_center
+
+          self.thrusting = keys[pygame.K_UP]
+          if self.thrusting:
+               fwd = from_angle(math.radians(self.angle))
+               ax, ay = scale_vec_(fwd, SHIP_THRUST)
+               self.val = add(self.val, scale_vec_((ax, ay), dt))
