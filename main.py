@@ -247,3 +247,13 @@ class Ship:
           self.thrusting = False
           
           self.radius = 0.5 * w * SHIP_COLLISION_SCALE
+
+          self.sfx_shoot = sfx.get("shoot" , _SilentSound())
+          self.sfx_shoot.set_volume(1.0)
+
+     def _nose_pos(self):
+          fwd = from_angle(math.radians(self.angle))
+          return add(self.pos, scale_vec_(fwd, self.nose_dist))
+     def _tail_pos(self):
+          fwd = from_angle(math.radians(self.angle))
+          return add(self.pos, scale_vec_(fwd, -self.tail_dist))
