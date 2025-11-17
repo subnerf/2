@@ -239,3 +239,11 @@ class Ship:
           self.cooldown = 0.0 # Time to next bullet can be fired
           self.invuln = 0.0
           self.alive = True
+          w, h = self.base_image.get_size()
+          self.nose_dist = (h / 2) * 0.95
+          # avoid clipping
+          self.tail_dist = (h /2) * 0.90
+
+          self.thrusting = False
+          
+          self.radius = 0.5 * w * SHIP_COLLISION_SCALE
