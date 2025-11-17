@@ -228,4 +228,14 @@ class Asteroid:
           # Original is removed once it splits
           return pieces
      
-    
+class Ship:
+     def __init__(self ,image, sfx):  # Original unrotated ship
+          self.base_image = image # Image that will be rotated each frame
+          self.image = image
+
+          self.pos = (WIDTH/2, HEIGHT/2)
+          self.val = (0.0, 0.0)
+          self.angle = -90.0
+          self.cooldown = 0.0
+          self.invuln = 0.0
+          self.alive = True
