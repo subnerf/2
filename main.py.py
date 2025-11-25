@@ -190,7 +190,7 @@ class Bullet:
         self.pos = wrap_position(self.pos)
 
     def draw(self, surf):
-           pygame.draw.circle(surf, ("#ff00c8"), (int(self.pos[0]), int(self.pos[1])), 1)
+           pygame.draw.circle(surf, ("#ff00c8"), (int(self.pos[0]), int(self.pos[1])), 3)
  #   def draw(self, surf):
  #       pygame.draw.rect(
  #           surf, 
@@ -390,8 +390,8 @@ class Game:
         self.state = "menu"
 
         # volumes (0..1)
-        self.music_volume = 500.60
-        self.sfx_volume   = 500.90
+        self.music_volume = 0.60
+        self.sfx_volume   = 0.90
         self.apply_volumes()
 
         # menu selection
