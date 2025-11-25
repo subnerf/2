@@ -43,8 +43,9 @@ import pygame
 # ----------------------------
 # Window / gameplay settings
 # ----------------------------
-WIDTH, HEIGHT = 960, 640
-FPS = 60
+
+WIDTH, HEIGHT = 1280, 1024
+FPS = 420
 BG_COLOR = (5, 7, 12)
 
 BULLET_SPEED = 520.0
@@ -189,8 +190,13 @@ class Bullet:
         self.pos = wrap_position(self.pos)
 
     def draw(self, surf):
-        pygame.draw.circle(surf, (255, 240, 160), (int(self.pos[0]), int(self.pos[1])), 2)
-
+           pygame.draw.circle(surf, ("#ff00c8"), (int(self.pos[0]), int(self.pos[1])), 1)
+ #   def draw(self, surf):
+ #       pygame.draw.rect(
+ #           surf, 
+ #           ("#ff00c8"),
+ #           pygame.Rect(int(self.pos[0]-2), int(self.pos[1]-10), 4, 10)
+ #       )
 
 class Asteroid:
     """Image-based asteroid with spin; splits into scaled fragments."""
@@ -324,7 +330,7 @@ class Ship:
         muzzle = add(self._nose_pos(), scale_vec(fwd, 6))  # push past tip
         vel = add(scale_vec(fwd, BULLET_SPEED), self.vel)
         bullets_out.append(Bullet(muzzle, vel))
-        self.cooldown = 0.18
+        self.cooldown = 0.18 # bullet rate
         self.sfx_shoot.play()
 
     def hyperspace(self):
@@ -384,8 +390,8 @@ class Game:
         self.state = "menu"
 
         # volumes (0..1)
-        self.music_volume = 0.60
-        self.sfx_volume   = 0.90
+        self.music_volume = 500.60
+        self.sfx_volume   = 500.90
         self.apply_volumes()
 
         # menu selection
@@ -534,15 +540,15 @@ class Game:
         self.draw_ui(surf)
 
     def draw_ui(self, surf):
-        ui = (220, 230, 245)
-        surf.blit(self.font.render(f"Score: {self.score}", True, ui), (12, 10))
-        surf.blit(self.font.render(f"Wave: {self.wave}", True, ui), (12, 36))
-        surf.blit(self.font.render(f"Lives: {max(0, self.lives)}", True, ui), (12, 62))
+        ui = ("#00ff40")
+        surf.blit(self.font.render(f"Score: {self.score}", True, ui), (WIDTH - 1250, HEIGHT - 1000))
+        surf.blit(self.font.render(f"Wave: {self.wave}", True, ui), (WIDTH - 700, HEIGHT - 970))
+        surf.blit(self.font.render(f"Lives: {max(0, self.lives)}", True, ui), (WIDTH - 1250, HEIGHT - 950))
         hint = self.font.render("Arrows rotate/thrust  Space shoot  H hyperspace", True, (170, 180, 200))
         surf.blit(hint, (WIDTH - hint.get_width() - 12, 10))
 
     def draw_menu(self, surf):
-        title = self.big_font.render("ASTEROIDS", True, (220, 230, 245))
+        title = self.big_font.render("404", True, ("#ffc400"))
         prompt = self.font.render("Enter: Start   Esc: Quit", True, (170, 180, 200))
 
         # slider draw helper
